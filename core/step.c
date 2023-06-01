@@ -15,6 +15,8 @@ void step(struct GridGeom *G, struct FluidState *S)
 {
   static struct FluidState *Stmp;
   static struct FluidState *Ssave;
+
+
   static int first_call = 1;
   if (first_call)
   {
@@ -22,7 +24,6 @@ void step(struct GridGeom *G, struct FluidState *S)
     Ssave = calloc(1,sizeof(struct FluidState));
     first_call = 0;
   }
-
   // Need both P_n and P_n+1 to calculate current
   // Work around ICC 18.0.2 bug in assigning to pointers to structs
 #if INTEL_WORKAROUND
@@ -33,7 +34,6 @@ void step(struct GridGeom *G, struct FluidState *S)
 #endif
   LOGN("Step %d",nstep);
   FLAG("Start step");
-
   // Predictor setup
   advance_fluid(G, S, S, Stmp, 0.5*dt);
   FLAG("Advance Fluid Tmp");
@@ -41,7 +41,6 @@ void step(struct GridGeom *G, struct FluidState *S)
   heat_electrons(G, S, Stmp);
   FLAG("Heat Electrons Tmp");
 #endif
-
   // Fixup routines: smooth over outlier zones
   fixup(G, Stmp);
   FLAG("Fixup Tmp");
@@ -59,12 +58,10 @@ void step(struct GridGeom *G, struct FluidState *S)
   // Corrector step
   double ndt = advance_fluid(G, S, Stmp, S, dt);
   FLAG("Advance Fluid Full");
-
 #if ELECTRONS
   heat_electrons(G, Stmp, S);
   FLAG("Heat Electrons Full");
 #endif
-
   fixup(G, S);
   FLAG("Fixup Full");
 #if ELECTRONS
@@ -75,9 +72,11 @@ void step(struct GridGeom *G, struct FluidState *S)
   FLAG("First bounds Full");
   fixup_utoprim(G, S);
   FLAG("Fixup U_to_P Full");
+  #if ( BLAND )
+    mag_source(G, S, dt);
+  #endif
   set_bounds(G, S);
   FLAG("Second bounds Full");
-
   // Increment time
   t += dt;
 
@@ -119,7 +118,7 @@ inline double advance_fluid(struct GridGeom *G, struct FluidState *Si, struct Fl
 #if METRIC == MKS
   fix_flux(F);
 #endif
-
+  
   //Constrained transport for B
   flux_ct(F);
 
@@ -156,4 +155,23 @@ inline double advance_fluid(struct GridGeom *G, struct FluidState *Si, struct Fl
     fail_save[j][i] = pflag[j][i];
 
   return ndt;
+}
+
+void mag_source(struct GridGeom *G, struct FluidState *S, double dt)
+{
+    int i, j;
+    double r, th;
+    double X[NDIM];
+    /* parameters of the magnetic field addition model */
+    double cthwid = .1;  /* how wide a cone is the field addition region */
+    double rate = 0.1;  /* dimensionless field addition rate */
+    double bchar = 1.;  /* characteristic field strength */
+    double fac = -2.76/(cthwid*cthwid); /*conversion from FWHM to 1/(2 stdev^2)*/
+    double add = 0;
+    ZLOOP {
+        coord(i, j, CENT, X);
+        bl_coord(X, &r, &th);
+        S->P[B1][j][i] += (exp(th*th*fac)-exp((M_PI-th)*(M_PI-th)*fac))*rate*dt*bchar/G->gdet[CENT][j][i];
+        /* done! */
+    }
 }

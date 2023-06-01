@@ -16,7 +16,7 @@
 // Metric: 'MINKOWSKI' or 'MKS'
 #define METRIC MKS
 // Set 'DEREFINE_POLES' to 1 for FMKS
-#define DEREFINE_POLES 1
+#define DEREFINE_POLES 0
 
 
 // Floors:
@@ -33,6 +33,7 @@
 // BETA_HEAT         - (0,1) Beta-dependent electron heating
  
 #define ELECTRONS           1
+#define BLAND               1
 #define ALLMODELS           1
 #define SUPPRESS_HIGHB_HEAT 1
 #define BETA_HEAT           1

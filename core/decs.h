@@ -415,6 +415,10 @@ void heat_electrons(struct GridGeom *G, struct FluidState *Sh, struct FluidState
 void fixup_electrons(struct FluidState *S);
 #endif
 
+#if BLAND
+void mag_source(struct GridGeom *G, struct FluidState *S, double dt);
+#endif
+
 // fixup.c
 void fixup(struct GridGeom *G, struct FluidState *S);
 void fixup_utoprim(struct GridGeom *G, struct FluidState *S);
